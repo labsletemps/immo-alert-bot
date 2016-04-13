@@ -1,0 +1,19 @@
+scan.php & tweet.php
+--------------------
+PHP scripts are launched via crontab,
+1.  scan.php launched once at 8am on Thursday.
+  . checks on http://www.ge.ch/registre_foncier/publications-foncieres.asp to get transactions with a price (Prix total de l'affaire) greater than X
+  . build tweets and store them on DB
+2.  tweet.php launched every 15mim from 8am on Thursday.
+  scan DB and send tweets
+
+
+SQLite Schema
+----------
+CREATE TABLE 'immo_alert' (
+ 'sent' DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ 'message' TEXT NOT NULL,
+ 'itweet' INTEGER NOT NULL DEFAULT 0 ,
+ 'sent_status' BOOLEAN NOT NULL DEFAULT 0 ,
+ 'sent_error_msg' TEXT,
+ PRIMARY KEY ('sent', 'message'))');
