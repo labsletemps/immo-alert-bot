@@ -1,0 +1,9 @@
+<?php
+return [
+  'consumer_key' => '',
+  'consumer_secret' => '',
+  'token' => '',
+  'secret' => '',
+  'db' => 'tweets.db',
+  'wunderground_api' => '',
+];
