@@ -16,7 +16,8 @@ PHP scripts are launched via crontab,
 
 
 SQLite Schema
-----------
+-------------
+```sql
 CREATE TABLE 'immo_alert' (
  'sent' DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
  'message' TEXT NOT NULL,
@@ -24,3 +25,4 @@ CREATE TABLE 'immo_alert' (
  'sent_status' BOOLEAN NOT NULL DEFAULT 0 ,
  'sent_error_msg' TEXT,
  PRIMARY KEY ('sent', 'message'))');
+```
