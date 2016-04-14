@@ -3,7 +3,7 @@
 ## Immo Alerte GE
 
 
-@Immo_Alerte est un projet du quotidien suisse Le Temps. Ce TwitterBot repère et tweete tous les jeudis matin les transactions immobilières supérieures à 5 millions de francs suisses à Genève, en s'appuyant sur les données publiques du registre foncier cantonal. 
+@Immo_Alerte est un projet du quotidien suisse Le Temps. Ce TwitterBot repère et tweete tous les jeudis matin les transactions immobilières supérieures à 5 millions de francs suisses à Genève, en s'appuyant sur les données publiques du registre foncier cantonal. Il donne aussi la météo du jour, grâce à l'API de Wunderground. 
 
 Le TwitterBot: https://twitter.com/immo_alerte
 
