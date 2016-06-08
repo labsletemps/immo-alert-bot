@@ -1,0 +1,234 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<style type="text/css">
+	html,body {
+		margin: 0;
+		padding: 0;
+	}
+	</style>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
+	<script type="text/javascript" src="js/d3.js"></script>
+	<script>
+		var	ajaxDone = 0,
+			EURvsCHF = 0,
+			quartiers = [
+				{	
+					'quartier':'Aux Paquis',				
+					'url':'http://api.rentswatch.com/api/cities/geocode?q=46.21259569,6.14852428&radius=.7&token=NiUrYwFk4JpEZAobScyo',	
+					'svgPath':'c_x5F_paquis'
+				},{	
+					'quartier':'A Secheron',
+					'url':'http://api.rentswatch.com/api/cities/geocode?q=46.22165246,6.14474773&radius=.6&token=NiUrYwFk4JpEZAobScyo',
+					'svgPath':'c_x5F_secherons'
+				},{	
+					'quartier':'Aux Nations',
+					'url':'http://api.rentswatch.com/api/cities/geocode?q=46.21832687,6.13689423&radius=.7&token=NiUrYwFk4JpEZAobScyo',
+					'svgPath':'c_x5F_nations'
+				},{	
+					'quartier':'Au Grand pré',
+					'url':'http://api.rentswatch.com/api/cities/geocode?q=46.21203145,6.13277435&radius=.6&token=NiUrYwFk4JpEZAobScyo',
+					'svgPath':'c_x5F_grand-pre'
+				},{
+					'quartier':'A Saint Gervais',
+					'url':'http://api.rentswatch.com/api/cities/geocode?q=46.20739852,6.14371777&radius=.5&token=NiUrYwFk4JpEZAobScyo',
+					'svgPath':'c_x5F_saint-gervais'
+				},{
+					'quartier':'A la Jonction',
+					'url':'http://api.rentswatch.com/api/cities/geocode?q=46.19994342,6.1351347&radius=.8&token=NiUrYwFk4JpEZAobScyo',
+					'svgPath':'c_x5F_jonction'
+				},{	
+					'quartier':'Aux Bastions',
+					'url':'http://api.rentswatch.com/api/cities/geocode?q=46.202884,6.14363194&radius=.4&token=NiUrYwFk4JpEZAobScyo',
+					'svgPath':'c_x5F_bastions'
+				},{
+					'quartier':'A Genève-Cité',
+					'url':'http://api.rentswatch.com/api/cities/geocode?q=46.20154739,6.14933968&radius=.5&token=NiUrYwFk4JpEZAobScyo',
+					'svgPath':'c_x5F_cite'
+				},{
+					'quartier':'Aux Eaux-vives',
+					'url':'http://api.rentswatch.com/api/cities/geocode?q=46.20347803,6.16148472&radius=.8&token=NiUrYwFk4JpEZAobScyo',
+					'svgPath':'c_x5F_eaux-vives'
+				},{
+					'quartier':'A Florissant',
+					'url':'http://api.rentswatch.com/api/cities/geocode?q=46.19738885,6.16157055&radius=.7&token=NiUrYwFk4JpEZAobScyo',
+					'svgPath':'c_x5F_florissant'
+				},{
+					'quartier':'A Champel',
+					'url':'http://api.rentswatch.com/api/cities/geocode?q=46.19186345,6.15684986&radius=.7&token=NiUrYwFk4JpEZAobScyo',
+					'svgPath':'c_x5F_champel'
+				},{
+					'quartier':'A la Cluse',
+					'url':'http://api.rentswatch.com/api/cities/geocode?q=46.19224965,6.1457777&radius=.7&token=NiUrYwFk4JpEZAobScyo',
+					'svgPath':'c_x5F_cluse'
+				},{
+					'quartier':'Aux Acacias - Vernets',
+					'url':'http://api.rentswatch.com/api/cities/geocode?q=46.19334883,6.13127232&radius=.7&token=NiUrYwFk4JpEZAobScyo',
+					'svgPath':'c_x5F_acacias-vernets'
+				},{
+					'quartier':'Aux Tranchée, rive',
+					'url':'http://api.rentswatch.com/api/cities/geocode?q=46.1970621,6.1516571&radius=.55&token=NiUrYwFk4JpEZAobScyo',
+					'svgPath':'c_x5F_tranchee-rive'
+				},{
+					'quartier':'A Saint Jean',
+					'url':'http://api.rentswatch.com/api/cities/geocode?q=46.20552741,6.12792492&radius=.64&token=NiUrYwFk4JpEZAobScyo',
+					'svgPath':'c_x5F_saint-jean'
+				}
+			],
+			tweetsVar = {
+				'averagePrice':0,
+				'totAnnonces':0,
+				'minPrice':9999,
+				'maxPrice':0,
+				'minQuartier':'',
+				'maxQuartier':'',
+				'averagePrice':0
+			},
+			tweetsMsg = [	// Tweets contents, with variants so messages are not always the same.
+				{
+					'msg':[
+						"Bonjour. A #Genève, le prix moyen du m2 à la location est de {{ averagePrice }} CHF ({{ totAnnonces }} annonces analysées par @rentswatch)",
+						"Chers abonnés, pour louer un appartement à #Genève, comptez {{ averagePrice }} CHF/m2 ({{ totAnnonces }} offres analysées par @rentswatch)"],
+					'image':''
+				},{
+					'msg':[
+						"Voici quartier par quartier les prix du m2 sur le marché locatif à #Genève",
+						"#Genève Retrouvez quartier par quartier notre carte des prix des loyers au m2",
+						"Votre quartier est-il cher ou bon marché? Notre carte des prix à la location #Genève"],
+					'image':'rentwatch.png'
+				},{
+					'msg':[
+						"#Genève {{ minQuartier }}, les loyers sont les + bas ({{ minPrice }} CHF/m2). {{ maxQuartier }}, les + hauts ({{ maxPrice }} CHF/m2)"],
+					'image':''
+				}
+			];
+
+
+		$.getJSON(
+			"http://api.fixer.io/latest?symbols=EUR,CHF", 
+			function(dataRate) {
+				EURvsCHF = dataRate.rates.CHF;
+				for (var i = 0; i < quartiers.length; i++) {
+			    var title = quartiers[i].quartier;
+			    $.getJSON(quartiers[i].url , (function(curQuartier) {
+		        return function(data) {
+		        	outputData(data, curQuartier);
+		        };
+			    })(i));
+				}
+			}
+		);
+
+		function outputData(data, quartier) {
+			quartiers[quartier]['price'] = data.avgPricePerSqm * EURvsCHF;
+			quartiers[quartier]['total'] = data.total;
+			tweetsVar.averagePrice += quartiers[quartier]['price'] * quartiers[quartier]['total'];
+			tweetsVar.totAnnonces += data.total;
+			ajaxDone++;
+
+			if (ajaxDone >= quartiers.length) {
+				tweetsVar.averagePrice = tweetsVar.averagePrice / tweetsVar.totAnnonces
+				drawMap();
+				stackTweets();
+			}
+		};
+
+		function stackTweets() {
+			// Min, Max & average prices calculation
+			for (var i = 0; i < quartiers.length; i++) {
+				if (tweetsVar.minPrice > quartiers[i]['price']) {
+					tweetsVar.minPrice = quartiers[i]['price'];
+					tweetsVar.minQuartier = quartiers[i]['quartier'];
+				}
+				if (tweetsVar.maxPrice < quartiers[i]['price']) {
+					tweetsVar.maxPrice = quartiers[i]['price'];
+					tweetsVar.maxQuartier = quartiers[i]['quartier'];
+				}
+			}
+			// Round prices
+			tweetsVar.minPrice = Math.round(tweetsVar.minPrice,0);
+			tweetsVar.maxPrice = Math.round(tweetsVar.maxPrice,0); 
+			tweetsVar.averagePrice = Math.round(tweetsVar.averagePrice,0);
+
+
+			// Store tweets in SQLite
+			var regExp = /{{([^}}]+)}}/g;
+			var tweets = [];
+			for (var i = 0; i < tweetsMsg.length; i++) {
+				var iMsg = Math.floor((Math.random() * tweetsMsg[i]['msg'].length)),	// choose message randomly
+					tweet = tweetsMsg[i]['msg'][iMsg],
+					matches = tweet.match(regExp);
+				
+				// Put variables values in tweets messages
+				if(matches) {
+					for (var j = 0; j < matches.length; j++) {
+						var variableName = matches[j].substr(2, matches[j].length-4).trim(); //console.log(nomChamp);
+						tweet = tweet.replace(matches[j], tweetsVar[variableName]);	//console.log( i+': '+tweet);
+					}
+				}
+			
+				tweets.push({
+					itweet: i,
+					message: tweet,
+					attached_image: tweetsMsg[i]['image']
+				});
+			}
+
+			$.post( "prix_locatif_data.php", 
+			{
+				tweets: tweets
+			}).done(function( data ) {
+				//alert(data);//console.log( "Data Loaded: " + data );
+		  });
+
+		}
+
+		function drawMap() {
+			// Get map file 
+			d3.xml("svg_bot_immo/map_full.svg", "image/svg+xml", function(xml) {
+
+				// Build maps
+				$( xml.documentElement ).appendTo( '#map_ge' );
+
+				// Fill price & colors
+				for (var i = 0; i < quartiers.length; i++) {
+					
+					var path = d3.select('#map_ge'+' svg '+'#'+quartiers[i].svgPath +' path');
+					var text = d3.select('#map_ge'+' svg '+'#'+quartiers[i].svgPath +' text');
+					text.text(Math.round(quartiers[i]['price']),0);
+
+					if (text.text() <= 32 ) {
+						path.style({
+							'fill':'#bbe88d',
+							'stroke': '#8cae6a',
+						});
+					}
+					else if (text.text() <= 34 ) {
+						path.style({
+							'fill':'#fdf57a',
+							'stroke': '#beb85c',
+						});
+					}
+					else if (text.text() <= 36 ) {
+						path.style({
+							'fill':'#fabe78',
+							'stroke': '#bc8f5a',
+						});
+					}
+					else {
+						path.style({
+							'fill':'#ff6666',
+							'stroke': '#bf4d4d',
+						});
+					}
+				}
+			});		
+		}
+	</script>
+</head>
+<body>
+	<div id="map_ge"></div>
+	<!-- phantom.js -->
+</body>
+</html>
