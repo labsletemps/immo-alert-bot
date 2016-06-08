@@ -38,6 +38,42 @@ if (file_exists(__DIR__ . '/settings.php')) {
 			'status' => $row['message']
 		));
 
+		if (!empty($row['attached_image'])) {
+			
+			// Convert image
+			$imagedata = file_get_contents($row['attached_image']);
+			$base64 = base64_encode($imagedata);
+
+			// Upload image
+			$tmhOAuth->request(
+				'POST', 
+				'https://upload.twitter.com/1.1/media/upload.json',
+				array(
+					'media_data'  => $base64
+				)
+			);
+			// Send tweet with image
+			if($media = json_decode($tmhOAuth->response['response'], true)) {
+				$tmhOAuth->request(
+					'POST', 
+					$tmhOAuth->url('1.1/statuses/update'), 
+					array(
+						'status' => $row['message'],
+						'media_ids' => $media['media_id']
+					)
+				);
+			}
+		}
+		else {
+			// Send tweet without image
+			$tmhOAuth->request(
+				'POST', 
+				$tmhOAuth->url('1.1/statuses/update'), 
+				array('status' => $row['message'])
+			);	
+		}
+
+		
 		if ($tmhOAuth->response['code'] == 200) {
 			$err_msg = 'OK';
 			$req = 'UPDATE immo_alert
