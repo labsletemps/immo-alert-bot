@@ -1,5 +1,12 @@
 <?php
-	$db = new SQLite3('db/twitterbot.db');
+if (file_exists(__DIR__ . '/settings.php')) {
+	$settings = require __DIR__ . '/settings.php';
+}else{
+	echo 'Missing settings file.';
+	exit();
+}
+
+	$db = new SQLite3($settings['db']);
 
 	if (isset($_POST['tweets']) && !empty($_POST['tweets'])) {
 		$tweets = $_POST['tweets'];
