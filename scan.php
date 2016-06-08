@@ -174,19 +174,34 @@ if (file_exists(__DIR__ . '/settings.php')) {
 	);
 	$query = http_build_query($query);
 	$url_search = "https://www.ge.ch/registre_foncier/publications-foncieres.asp?" . $query;
-
 	echoDebug('<a target="_blank" href="'.$url_search.'"">'.$url_search.'</a><hr>');
-	$source = file_get_contents($url_search);
-	if (false===$source) {
-		echoDebug('Erreur de lecture URL: '.$url_search);
-		exit;
-	}
 
-	$captchaErr = (strpos($source, "Vous n'avez pas rempli correctement le champ de calcul") > 0);
-	echoDebug("Erreur de calcul ?: " . $captchaErr . "<hr>");
-	// if ($captchaErr) {
-	// 	header('Location:'.$_SERVER['PHP_SELF'].'?'.$_SERVER['QUERY_STRING']);
-	// }
+	$attempt = 0;
+	$source = false;
+	$captchaError = false;
+	$agent= 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.0.3705; .NET CLR 1.1.4322)';
+	while (!$source && ++$attempt < 10 && $captchaError===false) {
+		$ch = curl_init();
+		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+		curl_setopt($ch, CURLOPT_VERBOSE, true);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLOPT_USERAGENT, $agent);
+		curl_setopt($ch, CURLOPT_URL,$url_search);
+		$source = curl_exec($ch);
+		curl_close($ch);
+
+		if (false === $source) {
+			echoDebug('Erreur de lecture URL: '.$url_search. ' - Tentative '.$attempt.'<br>');
+		}
+		
+		if (false !== $captchaError = strpos($source, "Vous n'avez pas rempli correctement le champ de calcul")) {
+			echoDebug("Erreur de calcul ?: " . $captchaErr . "tentative ".$attempt."<hr>");
+		}
+	}
+	if ($attempt >= 10) {
+		echoDebug("10 tentatives <hr>");
+		die();
+	}
 
 
 	// Parse text
@@ -268,7 +283,7 @@ if (file_exists(__DIR__ . '/settings.php')) {
 		],*/[
 			'msg' => [
 				"La transaction record de la semaine: une vente à {$results[0]['priceTxt']} CHF à {$results[0]['city']}",
-				"La vente de la la semaine: une transaction de {$results[0]['priceTxt']} francs à {$results[0]['city']}",
+				"La vente de la semaine: une transaction de {$results[0]['priceTxt']} francs à {$results[0]['city']}",
 				"Pour un montant de {$results[0]['priceTxt']} CHF, cette transaction à {$results[0]['city']} est la plus importante de la semaine" ],
 			'link' => '',	// link for transactionnal tweet will be generated later on
 			'transactionnal' => true
