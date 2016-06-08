@@ -35,7 +35,7 @@ if (file_exists(__DIR__ . '/settings.php')) {
 		$fromDate = explode('-', $_GET['fromDate']);
 	}
 	else {	// last week
-		$fromDate = explode('-', date('Y-m-d', strtotime("-7 day")));
+		$fromDate = explode('-', date('Y-n-j', strtotime("-7 days")));
 	}
 
 	// To date  (ex: 2016-12-31)
@@ -43,7 +43,7 @@ if (file_exists(__DIR__ . '/settings.php')) {
 		$toDate = explode('-', $_GET['toDate']);
 	}
 	else {	// yesterday (since ge.ch.... updates data on wednesday)
-		$toDate = explode('-',date('Y-m-d', strtotime("-1 day")));
+		$toDate = explode('-',date('Y-n-j', strtotime("-1 day")));
 	}
 
 	echoDebug('<strong>Paramètres envoyés:</strong> '.$priceAlert .' CHF ');
@@ -120,17 +120,74 @@ if (file_exists(__DIR__ . '/settings.php')) {
 		echoDebug($meteo . '<hr>');
 	} // end if $settings['wunderground_api']
 
+	
+	// Get captcha results
+	$content = file_get_contents('https://www.ge.ch/registre_foncier/publications-foncieres.asp');
+
+	$dom = new \DOMDocument('1.0', 'UTF-8');
+	libxml_use_internal_errors(true) and libxml_clear_errors();
+	$dom->loadHTML(mb_convert_encoding($content, 'HTML-ENTITIES', 'UTF-8'), LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD | LIBXML_NOWARNING);
+
+
+	$ef_captchacontrole = '';
+	$labels = $dom->getElementsByTagName('label');
+	foreach($labels as $label) {
+		if ($label->getAttribute('for') == 'ef_captchacontrole') {
+			if (preg_match("/(\d)\s\+\s(\d)/i", $label->textContent, $matches)) {
+				echoDebug("Chiffres du captcha: " . print_r($matches, 1) . "<hr>");
+				$ef_captchacontrole = (int) $matches[1] + (int) $matches[2];
+			}
+		}
+	}
+
+	$ef_captcharesultcontrole = '';
+	$tid = '';
+	$inputs = $dom->getElementsByTagName('input');
+	foreach ($inputs as $input) {
+		if ($input->getAttribute('name') == 'ef_captcharesultcontrole') {
+			$ef_captcharesultcontrole = $input->getAttribute('value');
+			echoDebug("Captcha result controle: " . $ef_captcharesultcontrole . "<hr>");
+		}
+
+		if ($input->getAttribute('name') == 'tid') {
+			$tid = $input->getAttribute('value');
+			echoDebug("Captcha TID: " . $tid . "<hr>");
+		}
+	}
 
 	// Get distant page REGISTRE IMMOBILIER GENEVE content
-	$url_search = 'http://www.ge.ch/registre_foncier/publications-foncieres.asp?query=showallresult&commune=&operation=&texte=';
-	$url_search .= '&jourDeDate='.$fromDate[2].'&moisDeDate='.$fromDate[1].'&anneeDeDate='.$fromDate[0];
-	$url_search .= '&jourADate='.$toDate[2].'&moisADate='.$toDate[1].'&anneeADate='.$toDate[0];
+	$query = array (
+		'query' => 'showallresult',
+		'num' => '0',
+		'jourDeDate' => $fromDate[2],
+		'moisDeDate' => $fromDate[1],
+		'anneeDeDate' => $fromDate[0],
+		'jourADate' => $toDate[2],
+		'moisADate' => $toDate[1],
+		'anneeADate' => $toDate[0],
+		'commune' => '',
+		'texte' => '',
+		'ef_captchacontrole' => $ef_captchacontrole,
+		'tid' => $tid - 10,
+		'ef_captcharesultcontrole' => $ef_captcharesultcontrole,
+		'rechercher' => 'Rechercher',
+	);
+	$query = http_build_query($query);
+	$url_search = "https://www.ge.ch/registre_foncier/publications-foncieres.asp?" . $query;
+
 	echoDebug('<a target="_blank" href="'.$url_search.'"">'.$url_search.'</a><hr>');
 	$source = file_get_contents($url_search);
 	if (false===$source) {
 		echoDebug('Erreur de lecture URL: '.$url_search);
 		exit;
 	}
+
+	$captchaErr = (strpos($source, "Vous n'avez pas rempli correctement le champ de calcul") > 0);
+	echoDebug("Erreur de calcul ?: " . $captchaErr . "<hr>");
+	// if ($captchaErr) {
+	// 	header('Location:'.$_SERVER['PHP_SELF'].'?'.$_SERVER['QUERY_STRING']);
+	// }
+
 
 	// Parse text
 	preg_match_all($strMatch, $source, $match);
@@ -200,7 +257,7 @@ if (file_exists(__DIR__ . '/settings.php')) {
 	$tweets = [	// Tweets contents, with variants so messages are not always the same.
 		[
 			'msg' => [
-				"Bonjour! $meteo Comme chaque jeudi, voici notre bilan du marché immobilier."],
+				"Bonjour! $meteo Comme chaque mercredi, voici notre bilan du marché immobilier."],
 			'link' => ""
 		],/*[
 			'msg' => [
@@ -232,9 +289,9 @@ if (file_exists(__DIR__ . '/settings.php')) {
 		],[
 			'msg' => [
 				"Pour plus de détails, voici l’intégralité des ventes enregistrées au registre foncier du canton de Genève",
-				"Retrouvez ici toutes les transactions foncières de la semaine, sur le site du registre foncier du canton de Genève",
+				"Retrouvez ici toutes les transactions foncières, sur le site du registre foncier du canton de Genève",
 				"Vous souhaitez plus de détails? Toutes les transactions sont en ligne sur le site du registre foncier de Genève" ],
-			'link' => "$url_search"
+			'link' => '',//"$url_search"
 		],[
 			'msg' => [
 				"Notre dernier article immo: «{$xml->channel->item[0]->title}»",
@@ -288,12 +345,14 @@ if (file_exists(__DIR__ . '/settings.php')) {
 
 				$curResult = $results[$iTweet-$firstTransactionnalTweet];
 				$itemDate = explode('.', $curResult['date']); // date got from ge.ch: 31.12.2016
+				/*
 				$t['link'] = 'http://www.ge.ch/registre_foncier/publications-foncieres.asp?query=showallresult&operation='
 				. "&texte=".urlencode($curResult['textToSearch'])
 				. '&jourDeDate='.$itemDate[0].'&moisDeDate='.$itemDate[1].'&anneeDeDate='.$itemDate[2]
 				. '&jourADate='.$itemDate[0].'&moisADate='.$itemDate[1].'&anneeADate='.$itemDate[2]
 				. '&commune='. urlencode( iconv( 'UTF-8' ,  'Windows-1252', str_replace('Genève-', '', $curResult['city'])));
-
+				*/
+				$t['link'] = ''; // Because of captcha, don't provide links anymore
 				stackTweet($t['msg'][rand( 0, count($t['msg'])-1 )], $t['link'], $iTweet, $db);
 			}
 		}
