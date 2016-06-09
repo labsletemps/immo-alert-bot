@@ -195,7 +195,7 @@ if (file_exists(__DIR__ . '/settings.php')) {
 		}
 		
 		if (false !== $captchaError = strpos($source, "Vous n'avez pas rempli correctement le champ de calcul")) {
-			echoDebug("Erreur de calcul ?: " . $captchaErr . "tentative ".$attempt."<hr>");
+			echoDebug("Erreur de calcul ?: " . $captchaError . "tentative ".$attempt."<br>");
 		}
 	}
 	if ($attempt >= 10) {
