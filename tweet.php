@@ -27,6 +27,7 @@ if (file_exists(__DIR__ . '/settings.php')) {
 		Sends a tweet
 	*/
 	function tweet($row, $db) {
+		global $settings;
 		require 'tmhOAuth/tmhOAuth.php'; 	// Include tweeter lib
 		$tmhOAuth = new tmhOAuth(array(		// tweeter authentification
 			'consumer_key' => $settings['consumer_key'],
